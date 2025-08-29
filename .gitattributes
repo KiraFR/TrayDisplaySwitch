@@ -1,0 +1,67 @@
+# ======================
+# Global settings
+# ======================
+
+# Force text files to use LF in Git (mais Windows convertira en CRLF en local si core.autocrlf=true)
+* text=auto eol=lf
+
+# ======================
+# Source code
+# ======================
+
+# C# / .NET source files
+*.cs     text diff=csharp
+*.csproj text
+*.sln    text eol=crlf
+*.props  text
+*.targets text
+
+# Config files
+*.config text
+*.json   text
+*.yaml   text
+*.yml    text
+*.xml    text
+*.editorconfig text
+*.gitignore text
+*.gitattributes text
+
+# Scripts
+*.ps1    text eol=crlf
+*.sh     text eol=lf
+
+# ======================
+# Binary files (no diff)
+# ======================
+*.exe    binary
+*.dll    binary
+*.pdb    binary
+*.mdb    binary
+*.so     binary
+*.dylib  binary
+*.a      binary
+*.lib    binary
+*.obj    binary
+*.iso    binary
+
+# Images / icons
+*.ico    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.bmp    binary
+*.tiff   binary
+*.svg    text
+
+# Archives
+*.zip    binary
+*.tar    binary
+*.gz     binary
+*.7z     binary
+
+# Fonts
+*.ttf    binary
+*.otf    binary
+*.woff   binary
+*.woff2  binary

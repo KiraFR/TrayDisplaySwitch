@@ -1,60 +1,66 @@
 # TrayDisplaySwitch
 
-A lightweight **Windows 11 tray application** to quickly switch display modes (PC only, Duplicate, Extend, Second screen only) using the built‑in `DisplaySwitch.exe` tool.
+A lightweight **Windows system tray application** that lets you quickly switch between display modes (PC only, Duplicate, Extend, Second screen only) using the built-in `DisplaySwitch.exe` tool.
 
-## Features
-- Runs in the **system tray** (notification area).
-- Context menu with options:
+## ✨ Features
+- Runs silently in the **system tray** (notification area).
+- Simple **context menu** with options:
   - **PC screen only** (`/internal`)
   - **Duplicate** (`/clone`)
   - **Extend** (`/extend`)
   - **Second screen only** (`/external`)
   - **Open Display Settings** (shortcut to Windows settings)
   - **Exit**
-- **Embedded icon** (no external file needed).
-- **Secure**: uses absolute path to `DisplaySwitch.exe` and argument whitelist.
-- Prevents multiple instances (global mutex).
+- **Auto-scaled tray icon** (light and dark mode support).
+- Prevents multiple instances via a global mutex.
+- **Secure by design**:
+  - Uses absolute path to `DisplaySwitch.exe`.
+  - Only allows whitelisted arguments.
 
-## Requirements
-- Windows 10/11
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (for building)
+## 🖥️ Requirements
+- Windows 10 / 11
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (to build from source)
 
-## Build
+## ⚙️ Build
 ```powershell
 # Clone the repo
+git clone https://github.com/<your-username>/TrayDisplaySwitch.git
 cd TrayDisplaySwitch
 
 # Build in Release mode
 dotnet build -c Release
 
-# Run
+# Run directly
 dotnet run -c Release
 
-# Or launch the .exe directly
+# Or start the built .exe
 ./bin/Release/net8.0-windows/TrayDisplaySwitch.exe
 ```
 
-## Packaging
-Create a single self‑contained executable:
+## 📦 Packaging
+To create a single self-contained executable:
+
 ```powershell
-dotnet publish -c Release -r win-x64 \
+dotnet publish -c Release -r win-x64 `
   -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true
 ```
-Resulting binary will be under:
+
+The binary will be located at:
+
 ```
 bin/Release/net8.0-windows/win-x64/publish/TrayDisplaySwitch.exe
 ```
 
-## Usage
-Once launched:
-- The app appears in the tray near the clock.
-- Right‑click → choose display mode.
+## 🚀 Usage
+1. Launch `TrayDisplaySwitch.exe`.
+2. The app appears in the system tray (near the clock).
+3. Right-click the icon → select your desired display mode.
 
-## Security Notes
-- Uses absolute path (`%SystemRoot%\\System32\\DisplaySwitch.exe`).
-- Hardcoded whitelist of arguments.
-- Runs with `asInvoker` (no admin rights needed).
-- Icon embedded in the executable to avoid DLL hijacking via external files.
+## 🔒 Security Notes
+- Absolute path to `DisplaySwitch.exe` prevents path hijacking.
+- Hardcoded whitelist of valid arguments.
+- Runs as `asInvoker` (no elevated privileges required).
+- Embedded icon (no external resources).
 
-## License
-MIT License. See [LICENSE](LICENSE) file for details.
+## 📜 License
+This project is licensed under the [MIT License](LICENSE).

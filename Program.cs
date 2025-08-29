@@ -5,144 +5,208 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32; // Registry + SystemEvents
+
+// Alias to disambiguate Timer
+using WinFormsTimer = System.Windows.Forms.Timer;
 
 namespace TrayDisplaySwitch
 {
-	internal sealed class TrayDisplayAppContext : ApplicationContext
-	{
-		private readonly NotifyIcon _notifyIcon;
-		private readonly ContextMenuStrip _menu;
+    internal sealed class TrayDisplayAppContext : ApplicationContext
+    {
+        private readonly NotifyIcon _notifyIcon;
+        private readonly ContextMenuStrip _menu;
 
-		// Chemin absolu sûr vers DisplaySwitch.exe (évite le détournement via PATH)
-		private static string DisplaySwitchPath => Path.Combine(Environment.SystemDirectory, "DisplaySwitch.exe");
+        private bool _isLightTheme;
+        private Icon? _ownedIcon;
+        private readonly WinFormsTimer _themePollTimer;
 
-		public TrayDisplayAppContext()
-		{
-			_menu = new ContextMenuStrip();
+        private static string DisplaySwitchPath => Path.Combine(Environment.SystemDirectory, "DisplaySwitch.exe");
 
-			_menu.Items.Add("Écran PC uniquement", null, (_, __) => RunDisplaySwitchMode(DisplayMode.Internal));
-			_menu.Items.Add("Dupliquer", null, (_, __) => RunDisplaySwitchMode(DisplayMode.Clone));
-			_menu.Items.Add("Étendre", null, (_, __) => RunDisplaySwitchMode(DisplayMode.Extend));
-			_menu.Items.Add("Second écran uniquement", null, (_, __) => RunDisplaySwitchMode(DisplayMode.External));
-			_menu.Items.Add(new ToolStripSeparator());
-			_menu.Items.Add("Paramètres d’affichage…", null, (_, __) => OpenDisplaySettings());
-			_menu.Items.Add(new ToolStripSeparator());
-			_menu.Items.Add("Quitter", null, (_, __) => ExitThread());
+        public TrayDisplayAppContext()
+        {
+            _menu = new ContextMenuStrip();
 
-			var trayIcon = LoadEmbeddedIcon() ?? SystemIcons.Application;
+            _menu.Items.Add("PC screen only", null, (_, __) => RunDisplaySwitchMode(DisplayMode.Internal));
+            _menu.Items.Add("Duplicate", null, (_, __) => RunDisplaySwitchMode(DisplayMode.Clone));
+            _menu.Items.Add("Extend", null, (_, __) => RunDisplaySwitchMode(DisplayMode.Extend));
+            _menu.Items.Add("Second screen only", null, (_, __) => RunDisplaySwitchMode(DisplayMode.External));
+            _menu.Items.Add(new ToolStripSeparator());
+            _menu.Items.Add("Display settings…", null, (_, __) => OpenDisplaySettings());
+            _menu.Items.Add(new ToolStripSeparator());
+            _menu.Items.Add("Exit", null, (_, __) => ExitThread());
 
-			_notifyIcon = new NotifyIcon
-			{
-				Icon = trayIcon,
-				ContextMenuStrip = _menu,
-				Visible = true,
-				Text = "Affichage: dupliquer/étendre/PC/externe"
-			};
+            _isLightTheme = IsLightTheme();
+            _ownedIcon = LoadEmbeddedIcon(GetIconResourceName(_isLightTheme));
+            var trayIcon = _ownedIcon ?? SystemIcons.Application;
 
-			_notifyIcon.DoubleClick += (_, __) => RunDisplaySwitchMode(DisplayMode.Extend);
+            _notifyIcon = new NotifyIcon
+            {
+                Icon = trayIcon,
+                ContextMenuStrip = _menu,
+                Visible = true,
+                Text = "Display switch: duplicate/extend/PC/external"
+            };
 
-			if (!File.Exists(DisplaySwitchPath))
-			{
-				ShowBalloon("DisplaySwitch introuvable", $"Fichier attendu: {DisplaySwitchPath}");
-			}
-		}
+            _notifyIcon.DoubleClick += (_, __) => RunDisplaySwitchMode(DisplayMode.Extend);
 
-		private static Icon? LoadEmbeddedIcon()
-		{
-			try
-			{
-				var asm = Assembly.GetExecutingAssembly();
-				// Nom de ressource : <namespace>.<nom_fichier>
-				using Stream? s = asm.GetManifestResourceStream("TrayDisplaySwitch.icon.ico");
-				if (s != null) return new Icon(s);
-			}
-			catch { /* ignore */ }
-			return null;
-		}
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
-		private static void OpenDisplaySettings()
-		{
-			try
-			{
-				Process.Start(new ProcessStartInfo
-				{
-					FileName = "ms-settings:display",
-					UseShellExecute = true
-				});
-			}
-			catch (Exception ex)
-			{
-				ShowBalloon("Impossible d’ouvrir les paramètres", ex.Message);
-			}
-		}
+            _themePollTimer = new WinFormsTimer { Interval = 3000 };
+            _themePollTimer.Tick += (_, __) => RefreshThemeIcon();
+            _themePollTimer.Start();
 
-		private static void RunDisplaySwitchMode(DisplayMode mode)
-		{
-			// Liste blanche stricte des arguments
-			string args = mode switch
-			{
-				DisplayMode.Internal => "/internal",
-				DisplayMode.Clone => "/clone",
-				DisplayMode.Extend => "/extend",
-				DisplayMode.External => "/external",
-				_ => throw new ArgumentOutOfRangeException(nameof(mode))
-			};
-			RunDisplaySwitch(args);
-		}
+            if (!File.Exists(DisplaySwitchPath))
+            {
+                ShowBalloon("DisplaySwitch not found", $"Expected file: {DisplaySwitchPath}");
+            }
+        }
 
-		private static void RunDisplaySwitch(string args)
-		{
-			try
-			{
-				var psi = new ProcessStartInfo
-				{
-					FileName = DisplaySwitchPath,
-					Arguments = args,
-					UseShellExecute = false,
-					CreateNoWindow = true,
-					WorkingDirectory = Environment.SystemDirectory
-				};
-				Process.Start(psi);
-			}
-			catch (Exception ex)
-			{
-				ShowBalloon("Échec du changement d’affichage", ex.Message);
-			}
-		}
+        private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category == UserPreferenceCategory.General ||
+                e.Category == UserPreferenceCategory.Color ||
+                e.Category == UserPreferenceCategory.VisualStyle)
+            {
+                RefreshThemeIcon();
+            }
+        }
 
-		protected override void ExitThreadCore()
-		{
-			_notifyIcon.Visible = false;
-			_notifyIcon.Dispose();
-			_menu.Dispose();
-			base.ExitThreadCore();
-		}
+        private void RefreshThemeIcon()
+        {
+            bool nowLight = IsLightTheme();
+            if (nowLight == _isLightTheme) return;
 
-		private static void ShowBalloon(string title, string? message)
-		{
-			using var tmp = new NotifyIcon { Icon = SystemIcons.Application, Visible = true };
-			tmp.BalloonTipTitle = title;
-			tmp.BalloonTipText = message ?? string.Empty;
-			tmp.ShowBalloonTip(3000);
-		}
-	}
+            _isLightTheme = nowLight;
 
-	internal enum DisplayMode { Internal, Clone, Extend, External }
+            var newIcon = LoadEmbeddedIcon(GetIconResourceName(_isLightTheme));
+            if (newIcon != null)
+            {
+                var old = _ownedIcon;
+                _notifyIcon.Icon = newIcon;
+                _ownedIcon = newIcon;
+                old?.Dispose();
+            }
+        }
 
-	internal static class Program
-	{
-		[STAThread]
-		private static void Main()
-		{
-			// Mutex global (string verbatim pour éviter CS1009)
-			using var mutex = new Mutex(true, @"Global\TrayDisplaySwitchMutex", out bool createdNew);
-			if (!createdNew) return; // déjà en cours
+        private static Icon? LoadEmbeddedIcon(string resourceLogicalName)
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                using Stream? s = asm.GetManifestResourceStream(resourceLogicalName);
+                if (s != null) return new Icon(s);
+            }
+            catch { }
+            return null;
+        }
+
+        private static void OpenDisplaySettings()
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "ms-settings:display",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ShowBalloon("Failed to open display settings", ex.Message);
+            }
+        }
+
+        private static void RunDisplaySwitchMode(DisplayMode mode)
+        {
+            string args = Program.GetArgs(mode);
+            RunDisplaySwitch(args);
+        }
+
+        private static void RunDisplaySwitch(string args)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = DisplaySwitchPath,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Environment.SystemDirectory
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                ShowBalloon("Failed to switch display mode", ex.Message);
+            }
+        }
+
+        protected override void ExitThreadCore()
+        {
+            SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
+            _themePollTimer.Stop();
+            _themePollTimer.Dispose();
+
+            _notifyIcon.Visible = false;
+            _notifyIcon.Dispose();
+            _ownedIcon?.Dispose();
+            _menu.Dispose();
+
+            base.ExitThreadCore();
+        }
+
+        private static void ShowBalloon(string title, string? message)
+        {
+            using var tmp = new NotifyIcon { Icon = SystemIcons.Application, Visible = true };
+            tmp.BalloonTipTitle = title;
+            tmp.BalloonTipText = message ?? string.Empty;
+            tmp.ShowBalloonTip(3000);
+        }
+
+        internal static string GetIconResourceName(bool isLightTheme) =>
+            isLightTheme ? "TrayDisplaySwitch.icon_light.ico"
+                         : "TrayDisplaySwitch.icon_dark.ico";
+
+        internal static bool IsLightTheme()
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                if (key?.GetValue("SystemUsesLightTheme") is int v)
+                    return v == 1;
+            }
+            catch { }
+            return true;
+        }
+    }
+
+    public enum DisplayMode { Internal, Clone, Extend, External }
+
+    internal static class Program
+    {
+        [STAThread]
+        private static void Main()
+        {
+            using var mutex = new Mutex(true, @"Global\TrayDisplaySwitchMutex", out bool createdNew);
+            if (!createdNew) return;
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
-			Application.EnableVisualStyles();
-			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new TrayDisplayAppContext());
-		}
-	}
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new TrayDisplayAppContext());
+        }
+
+        internal static string GetArgs(DisplayMode mode) => mode switch
+        {
+            DisplayMode.Internal => "/internal",
+            DisplayMode.Clone    => "/clone",
+            DisplayMode.Extend   => "/extend",
+            DisplayMode.External => "/external",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode))
+        };
+    }
 }

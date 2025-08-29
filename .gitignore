@@ -1,0 +1,70 @@
+# Build results
+bin/
+obj/
+publish/
+dist/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+*.log
+*.tlog
+
+# NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+# Cache global packages
+*.nuget/
+
+# Test results
+TestResult*/
+*.trx
+*.coverage
+*.coveragexml
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+
+# OS-specific
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.cache
+*.swp
+
+# Rider / JetBrains
+.idea/
+*.iml
+
+# Publish archives (zips created in CI)
+*.zip
+
+# Certificates (si jamais tu en génères pour tests)
+*.pfx
+*.cer
+*.key
+
+# Optional: exclude solution/user specific stuff if created
+*.sln
