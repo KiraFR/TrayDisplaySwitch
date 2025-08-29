@@ -138,6 +138,8 @@ namespace TrayDisplaySwitch
 			using var mutex = new Mutex(true, @"Global\TrayDisplaySwitchMutex", out bool createdNew);
 			if (!createdNew) return; // déjà en cours
 
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 			Application.Run(new TrayDisplayAppContext());

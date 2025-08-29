@@ -34,14 +34,14 @@ jobs:
             nuget-
 
       - name: Restore
-        run: dotnet restore ./TrayDisplaySwitch.csproj
+        run: dotnet restore ./
 
       - name: Build (Release)
-        run: dotnet build ./TrayDisplaySwitch.csproj --configuration Release --no-restore
+        run: dotnet build ./ --configuration Release --no-restore
 
       - name: Test
         run: |
-          dotnet test ./TrayDisplaySwitch.csproj --configuration Release --no-build `
+          dotnet test ./ --configuration Release --no-build `
             --logger "trx;LogFileName=test_results.trx"
 
       - name: Upload test results
@@ -54,10 +54,10 @@ jobs:
           if-no-files-found: ignore
 
   publish:
-    name: Publish App (Windows)
+    name: Publish App (win-x64)
     needs: build-test
     runs-on: windows-latest
-    if: ${{ github.event_name != 'pull_request' }}  # pas de publish sur PR
+    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,12 +67,16 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Restore
-        run: dotnet restore ./TrayDisplaySwitch.csproj
+      # Fix NETSDK1047 : restore/build with RID
+      - name: Restore (win-x64)
+        run: dotnet restore ./ -r win-x64
 
-      - name: Publish win-x64
+      - name: Build (Release, win-x64)
+        run: dotnet build ./ -c Release -r win-x64 --no-restore
+
+      - name: Publish (framework-dependent)
         run: |
-          dotnet publish ./TrayDisplaySwitch.csproj -c Release -r win-x64 --no-restore `
+          dotnet publish ./ -c Release -r win-x64 --no-restore `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:DebugType=None -p:DebugSymbols=false -p:SelfContained=false `
             -o out/win-x64
@@ -90,7 +94,7 @@ jobs:
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
-      - name: Download published artifact
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: app-win-x64
