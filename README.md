@@ -56,6 +56,34 @@ bin/Release/net8.0-windows/win-x64/publish/TrayDisplaySwitch.exe
 2. The app appears in the system tray (near the clock).
 3. Right-click the icon → select your desired display mode.
 
+## ⚡ Auto Start on Windows
+
+You can configure TrayDisplaySwitch to start automatically when Windows boots.
+
+### 🗂️ Method 1: Using the Startup Folder (simple)
+1. Press `Win + R`, type `shell:startup`, and press **Enter**.
+2. Copy the `TrayDisplaySwitch.exe` file (or a shortcut to it) into the **Startup** folder that opens.
+3. Restart your computer → the app will now launch automatically.
+
+### 🛠️ Method 2: Using the Windows Registry (advanced)
+1. Press `Win + R`, type `regedit`, and press **Enter**.
+2. Navigate to:
+   ```
+   HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run
+   ```
+3. Right-click → **New → String Value**.
+4. Name it:
+   ```
+   TrayDisplaySwitch
+   ```
+5. Set its value to the full path of your executable, e.g.:
+   ```
+   "C:\Users\YourUser\Path\TrayDisplaySwitch.exe"
+   ```
+6. Restart your computer → the app will now start automatically.
+
+⚠️ **Note:** The registry method keeps the Startup folder clean but should be used carefully.
+
 ## 🔒 Security Notes
 - Absolute path to `DisplaySwitch.exe` prevents path hijacking.
 - Hardcoded whitelist of valid arguments.
