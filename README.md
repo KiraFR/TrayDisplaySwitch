@@ -24,7 +24,7 @@ A lightweight **Windows system tray application** that lets you quickly switch b
 ## ⚙️ Build
 ```powershell
 # Clone the repo
-git clone [https://github.com/KiraFR/TrayDisplaySwitch.git](https://github.com/KiraFR/TrayDisplaySwitch.git)
+git clone https://github.com/KiraFR/TrayDisplaySwitch.git
 cd TrayDisplaySwitch
 
 # Build in Release mode
