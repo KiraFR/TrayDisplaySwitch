@@ -1,23 +1,22 @@
-name: .NET CI (Windows)
+name: .NET CI & Release (Windows)
 
 on:
   push:
     branches: [ "main" ]
-    tags:
-      - "v*"
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
-
-permissions:
-  actions: read
 
 jobs:
   build:
     runs-on: windows-latest
-
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup .NET 8 SDK
         uses: actions/setup-dotnet@v4
@@ -33,11 +32,11 @@ jobs:
       - name: Publish win-x64 (framework-dependent)
         run: dotnet publish .\TrayDisplaySwitch.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o .\publish\win-x64
 
-
-      - name: Zip artifact
+      - name: Zip artifacts
+        shell: pwsh
         run: |
-          powershell -NoProfile -Command "Compress-Archive -Path .\publish\win-x64\* -DestinationPath .\TrayDisplaySwitch-win-x64.zip"
-          # powershell -NoProfile -Command "Compress-Archive -Path .\publish\win-x64-sc\* -DestinationPath .\TrayDisplaySwitch-win-x64-selfcontained.zip"
+          Compress-Archive -Path .\publish\win-x64\* -DestinationPath .\TrayDisplaySwitch-win-x64.zip
+          # if (Test-Path .\publish\win-x64-sc) { Compress-Archive -Path .\publish\win-x64-sc\* -DestinationPath .\TrayDisplaySwitch-win-x64-selfcontained.zip }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -51,6 +50,8 @@ jobs:
     needs: build
     runs-on: windows-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
@@ -60,6 +61,8 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: dist/*.zip
           generate_release_notes: true
